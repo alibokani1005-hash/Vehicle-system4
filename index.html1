@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1e40af">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="سبلان پارت">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>سامانه خودرو | سبلان پارت پایدار ایرانیان</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+<style>
+  * { font-family: 'Vazirmatn', sans-serif; -webkit-tap-highlight-color: transparent; }
+  .plate { font-family: 'Courier New', monospace; letter-spacing: 2px; font-weight: bold; }
+  .fade-in { animation: fadeIn 0.3s ease-in; }
+  @keyframes fadeIn { from {opacity:0; transform:translateY(-10px);} to {opacity:1; transform:translateY(0);} }
+  @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.7);} 50%{box-shadow:0 0 0 10px rgba(239,68,68,0);} }
+  .pulse-red { animation: pulse-red 2s infinite; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  input, select, textarea { font-size: 16px !important; } /* جلوگیری از زوم iOS */
+  @media (max-width: 768px) {
+    .mobile-stack { flex-direction: column !important; }
+    .mobile-full { width: 100% !important; }
+    table { font-size: 12px; }
+    th, td { padding: 8px 4px !important; }
+  }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+
+<!-- صفحه ورود -->
+<div id="loginPage" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-blue-900 to-indigo-900">
+  <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md fade-in">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl mx-auto flex items-center justify-center text-white text-3xl mb-3 shadow-lg">🚛</div>
+      <h1 class="text-xl font-bold text-slate-800">سبلان پارت پایدار ایرانیان</h1>
+      <p class="text-slate-500 text-sm mt-1">سامانه مدیریت ورود و خروج خودرو</p>
+    </div>
+    <form id="loginForm" class="space-y-3">
+      <input type="text" id="loginUser" required autocomplete="username" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="نام کاربری">
+      <input type="password" id="loginPass" required autocomplete="current-password" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="رمز عبور">
+      <div id="loginError" class="hidden text-red-600 text-sm bg-red-50 p-2 rounded"></div>
+      <button type="submit" class="w-full bg-gradient-to-l from-blue-600 to-indigo-700 text-white py-3 rounded-lg font-bold">🔐 ورود</button>
+    </form>
+    <div class="mt-4 p-3 bg-slate-50 rounded-lg text-xs text-slate-600">
+      <p class="font-bold mb-1">کاربران پیش‌فرض:</p>
+      <p>admin / 1234 | guard / 1234 | viewer / 1234</p>
+    </div>
+  </div>
+</div>
+
+<!-- داشبورد -->
+<div id="dashboard" class="hidden">
+  <header class="bg-gradient-to-l from-blue-700 to-indigo-800 text-white shadow-lg sticky top-0 z-40">
+    <div class="px-4 py-3 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl">🚛</div>
+        <div class="hidden md:block">
+          <h1 class="text-sm font-bold">سبلان پارت پایدار ایرانیان</h1>
+          <p class="text-xs text-blue-100" id="dateBadge"></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="text-left text-xs hidden md:block">
+          <div id="userBadge" class="font-bold"></div>
+        </div>
+        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg text-xs font-medium">خروج</button>
+      </div>
+    </div>
+    <nav class="bg-white/10 overflow-x-auto">
+      <div class="px-2 flex gap-1">
+        <button onclick="showTab('entry')" data-tab="entry" class="tab-btn px-3 py-2 text-xs font-medium hover:bg-white/10 rounded-t whitespace-nowrap">📥 ورود</button>
+        <button onclick="showTab('current')" data-tab="current" class="tab-btn px-3 py-2 text-xs font-medium hover:bg-white/10 rounded-t whitespace-nowrap">🅿️ داخل <span id="insideBadge" class="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">0</span></button>
+        <button onclick="showTab('history')" data-tab="history" class="tab-btn px-3 py-2 text-xs font-medium hover:bg-white/10 rounded-t whitespace-nowrap">📜 تاریخچه</button>
+        <button onclick="showTab('reports')" data-tab="reports" class="tab-btn px-3 py-2 text-xs font-medium hover:bg-white/10 rounded-t whitespace-nowrap">📊 گزارش</button>
+        <button onclick="showTab('users')" data-tab="users" id="usersTab" class="tab-btn px-3 py-2 text-xs font-medium hover:bg-white/10 rounded-t whitespace-nowrap hidden">👥 کاربران</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="px-3 py-4">
+    <!-- آمار -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+      <div class="bg-white rounded-lg p-3 shadow-sm border-r-4 border-green-500">
+        <div class="text-slate-500 text-xs">داخل انبار</div>
+        <div id="statInside" class="text-xl font-bold">0</div>
+      </div>
+      <div class="bg-white rounded-lg p-3 shadow-sm border-r-4 border-blue-500">
+        <div class="text-slate-500 text-xs">ورودی امروز</div>
+        <div id="statTodayIn" class="text-xl font-bold">0</div>
+      </div>
+      <div class="bg-white rounded-lg p-3 shadow-sm border-r-4 border-orange-500">
+        <div class="text-slate-500 text-xs">خروجی امروز</div>
+        <div id="statTodayOut" class="text-xl font-bold">0</div>
+      </div>
+      <div class="bg-white rounded-lg p-3 shadow-sm border-r-4 border-purple-500">
+        <div class="text-slate-500 text-xs">کل رکوردها</div>
+        <div id="statTotal" class="text-xl font-bold">0</div>
+      </div>
+    </div>
+
+    <!-- تب ورود -->
+    <section id="tab-entry" class="tab-content">
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <h2 class="text-base font-bold text-slate-800 mb-3">📥 ثبت ورود خودرو</h2>
+        <form id="entryForm" class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">پلاک <span class="text-red-500">*</span></label>
+            <input type="text" id="plate" required class="plate w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="12ب456 - 78" dir="ltr">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">نوع خودرو</label>
+              <select id="vehicleType" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+                <option>سواری</option><option>وانت</option><option>کامیونت</option>
+                <option>کامیون</option><option>تریلی</option><option>سایر</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">رنگ</label>
+              <input type="text" id="color" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">نام راننده</label>
+            <input type="text" id="driverName" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">تلفن راننده</label>
+            <input type="tel" id="driverPhone" class="w-full px-3 py-2 border border-slate-300 rounded-lg" dir="ltr">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">شرکت</label>
+            <input type="text" id="company" class="w-full px-3 py-2 border border-slate-300 rounded-lg" list="companyList">
+            <datalist id="companyList"></datalist>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">هدف بازدید</label>
+            <select id="purpose" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+              <option>بارگیری</option><option>تخلیه بار</option><option>بازدید</option>
+              <option>جلسه</option><option>تحویل کالا</option><option>سایر</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">جایگاه پارک</label>
+            <input type="text" id="parkingSlot" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">توضیحات</label>
+            <textarea id="notes" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg"></textarea>
+          </div>
+          <button type="submit" class="w-full bg-gradient-to-l from-green-600 to-emerald-700 text-white py-3 rounded-lg font-bold">✅ ثبت ورود</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- تب خودروهای داخل -->
+    <section id="tab-current" class="tab-content hidden">
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base font-bold">🅿️ خودروهای داخل</h2>
+          <input type="text" id="searchCurrent" oninput="renderCurrent()" placeholder="🔍" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-24">
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-100">
+              <tr>
+                <th class="p-2 text-right">پلاک</th>
+                <th class="p-2 text-right">راننده</th>
+                <th class="p-2 text-right">ورود</th>
+                <th class="p-2 text-right">عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="currentTable" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- تب تاریخچه -->
+    <section id="tab-history" class="tab-content hidden">
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base font-bold">📜 تاریخچه</h2>
+          <button onclick="exportCSV()" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs">📥 Excel</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-100">
+              <tr>
+                <th class="p-2 text-right">پلاک</th>
+                <th class="p-2 text-right">راننده</th>
+                <th class="p-2 text-right">ورود</th>
+                <th class="p-2 text-right">خروج</th>
+              </tr>
+            </thead>
+            <tbody id="historyTable" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- تب گزارشات -->
+    <section id="tab-reports" class="tab-content hidden">
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <h2 class="text-base font-bold mb-3">📊 گزارشات</h2>
+        <canvas id="chartDaily" height="200"></canvas>
+      </div>
+    </section>
+
+    <!-- تب کاربران -->
+    <section id="tab-users" class="tab-content hidden">
+      <div class="bg-white rounded-xl shadow-sm p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base font-bold">👥 کاربران</h2>
+          <button onclick="openUserModal()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs">+ جدید</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-100">
+              <tr>
+                <th class="p-2 text-right">نام کاربری</th>
+                <th class="p-2 text-right">نام</th>
+                <th class="p-2 text-right">نقش</th>
+                <th class="p-2 text-right">عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- مودال خروج -->
+<div id="exitModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl p-5 w-full max-w-sm">
+    <h3 class="text-base font-bold mb-3">🚪 ثبت خروج</h3>
+    <div id="exitInfo" class="bg-slate-50 p-3 rounded-lg mb-3 text-sm"></div>
+    <textarea id="exitNotes" rows="2" placeholder="توضیحات خروج" class="w-full px-3 py-2 border border-slate-300 rounded-lg mb-3"></textarea>
+    <div class="flex gap-2">
+      <button onclick="confirmExit()" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold">ثبت خروج</button>
+      <button onclick="closeExitModal()" class="flex-1 bg-slate-200 py-2 rounded-lg">انصراف</button>
+    </div>
+  </div>
+</div>
+
+<!-- مودال کاربر -->
+<div id="userModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl p-5 w-full max-w-sm">
+    <h3 class="text-base font-bold mb-3">کاربر جدید</h3>
+    <form id="userForm" class="space-y-2">
+      <input type="text" id="userFullName" required placeholder="نام کامل" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+      <input type="text" id="userUsername" required placeholder="نام کاربری" class="w-full px-3 py-2 border border-slate-300 rounded-lg" dir="ltr">
+      <input type="text" id="userPassword" required placeholder="رمز عبور" class="w-full px-3 py-2 border border-slate-300 rounded-lg" dir="ltr">
+      <select id="userRole" class="w-full px-3 py-2 border border-slate-300 rounded-lg">
+        <option value="admin">مدیر</option>
+        <option value="guard">نگهبان</option>
+        <option value="viewer">ناظر</option>
+      </select>
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold">ذخیره</button>
+        <button type="button" onclick="closeUserModal()" class="flex-1 bg-slate-200 py-2 rounded-lg">انصراف</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast" class="hidden fixed bottom-4 left-4 right-4 md:right-4 md:left-auto px-4 py-3 rounded-lg shadow-lg z-50 text-white text-sm"></div>
+
+<script>
+// کد JavaScript کامل (همون نسخه قبلی ولی بهینه‌شده برای موبایل)
+const DEFAULT_USERS = [
+  { id: 1, username: 'admin', password: '1234', fullName: 'مدیر سیستم', role: 'admin' },
+  { id: 2, username: 'guard', password: '1234', fullName: 'نگهبان انبار', role: 'guard' },
+  { id: 3, username: 'viewer', password: '1234', fullName: 'ناظر', role: 'viewer' }
+];
+
+let users = JSON.parse(localStorage.getItem('sp_users')) || DEFAULT_USERS;
+let records = JSON.parse(localStorage.getItem('sp_records')) || [];
+let currentUser = JSON.parse(sessionStorage.getItem('sp_current')) || null;
+let pendingExitId = null;
+
+function save() {
+  localStorage.setItem('sp_users', JSON.stringify(users));
+  localStorage.setItem('sp_records', JSON.stringify(records));
+}
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `fixed bottom-4 left-4 right-4 md:right-4 md:left-auto px-4 py-3 rounded-lg shadow-lg z-50 text-white text-sm ${type==='error'?'bg-red-600':'bg-green-600'} fade-in`;
+  setTimeout(() => t.classList.add('hidden'), 2500);
+}
+function formatDateTime(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  return d.toLocaleDateString('fa-IR') + ' ' + d.toLocaleTimeString('fa-IR', {hour:'2-digit', minute:'2-digit'});
+}
+function formatDuration(start, end) {
+  if (!start) return '-';
+  const diff = Math.floor(((end ? new Date(end) : new Date()).getTime() - new Date(start).getTime()) / 1000);
+  return `${Math.floor(diff/3600)}س ${Math.floor((diff%3600)/60)}د`;
+}
+function isToday(ts) { return new Date(ts).toDateString() === new Date().toDateString(); }
+function roleLabel(r) { return { admin: 'مدیر', guard: 'نگهبان', viewer: 'ناظر' }[r] || r; }
+
+document.getElementById('loginForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const user = users.find(x => x.username === u && x.password === p);
+  if (!user) {
+    document.getElementById('loginError').textContent = '❌ نام کاربری یا رمز اشتباه است';
+    document.getElementById('loginError').classList.remove('hidden');
+    return;
+  }
+  currentUser = user;
+  sessionStorage.setItem('sp_current', JSON.stringify(user));
+  loadDashboard();
+});
+
+function logout() {
+  sessionStorage.removeItem('sp_current');
+  currentUser = null;
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('loginForm').reset();
+}
+
+function loadDashboard() {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('dashboard').classList.remove('hidden');
+  document.getElementById('userBadge').textContent = currentUser.fullName;
+  document.getElementById('dateBadge').textContent = new Date().toLocaleDateString('fa-IR', {weekday:'long'});
+  document.getElementById('usersTab').classList.toggle('hidden', currentUser.role !== 'admin');
+  showTab('entry');
+  updateStats();
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('bg-white/20'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  document.querySelector(`[data-tab="${name}"]`)?.classList.add('bg-white/20');
+  if (name === 'current') renderCurrent();
+  if (name === 'history') renderHistory();
+  if (name === 'reports') renderReports();
+  if (name === 'users') renderUsers();
+}
+
+document.getElementById('entryForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (currentUser.role === 'viewer') { toast('دسترسی ندارید', 'error'); return; }
+  const plate = document.getElementById('plate').value.trim();
+  if (records.find(r => r.plate === plate && !r.exitTime)) {
+    toast('⚠️ این خودرو داخل انبار است', 'error');
+    return;
+  }
+  records.push({
+    id: Date.now(),
+    plate,
+    vehicleType: document.getElementById('vehicleType').value,
+    color: document.getElementById('color').value,
+    driverName: document.getElementById('driverName').value,
+    driverPhone: document.getElementById('driverPhone').value,
+    company: document.getElementById('company').value,
+    purpose: document.getElementById('purpose').value,
+    parkingSlot: document.getElementById('parkingSlot').value,
+    notes: document.getElementById('notes').value,
+    entryTime: new Date().toISOString(),
+    exitTime: null,
+    registeredBy: currentUser.fullName
+  });
+  save();
+  e.target.reset();
+  toast('✅ ثبت شد');
+  updateStats();
+});
+
+function renderCurrent() {
+  const q = (document.getElementById('searchCurrent')?.value || '').toLowerCase();
+  const tbody = document.getElementById('currentTable');
+  const list = records.filter(r => !r.exitTime && (r.plate.toLowerCase().includes(q) || (r.driverName||'').toLowerCase().includes(q)));
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400">خودرویی نیست</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td class="p-2 plate text-blue-700">${r.plate}</td>
+      <td class="p-2">${r.driverName||'-'}<br><span class="
